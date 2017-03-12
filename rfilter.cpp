@@ -4,65 +4,60 @@
 #include <stdlib.h>
 #include <time.h>
 #include <ctime>
-
-using namespace std;
+#include <vector>
+#include <chrono>
+#include <iostream>
+#include <complex>
+#include <cmath>
 
 // Recursive filter on 1d arrays.
 // input = c[i0], c[i0+s], ...., c[i0+m*s], i.e., c(i) = c(i0+s*i)
 // kernel = k[0], k[1], ...., k[n-1]
-static void rightRFilter(double *c, int i0, int s, int m, double *k, int n, double *out){
+
+// left-right pass
+static void rightRFilter(double *in, int i0, int s, int m, double *k, int n, double *out){
     // First element (i = 0) doesnt change
-    out[0] = c[0];
+    out[0] = in[0];
     for(int i = 1; i < m+1; i++){
-        float sum = 0;
+        double sum = 0;
         // Suma en los elementos del k x los de c no negativos
         for(int r = 0; r<i && r<n; r++){
             sum += k[r]*out[s*(i-1-r)+i0];
         }
         //Actualizar c(i) = c(i) - sum
-        out[i0+s*i] = c[i0+s*i]-sum;
+        out[i0+s*i] = in[i0+s*i]-sum;
     }
 }
-static void leftRFilter(double *c, int i0, int s, int m, double *k, int n, double *out){
+// right-left pass
+static void leftRFilter(double *in, int i0, int s, int m, double *k, int n, double *out){
     // Last element (i = m) doesnt change
-    out[i0+s*m] = c[i0+s*m];
+    out[i0+s*m] = in[i0+s*m];
     for(int i = 1; i < m+1; i++){
-        float sum = 0;
+        double sum = 0;
         // Suma en los elementos del k x los de c no negativos
         for(int j = 0; j<n && j<i; j++){
             sum += k[j]*out[s*(m-i+1+j)+i0];
         }
-        //Update c(m-i) = c(m-i) - sum
-        out[i0+s*(m-i)] = c[i0+s*(m-i)]-sum;
+        //Update c(m-i) = in(m-i) - sum
+        out[i0+s*(m-i)] = in[i0+s*(m-i)]-sum;
     }
 }
-
-static void hrec(float *in, int w, int h, int p, float *k, int n, float *out) {
-    // Pass on lines
+// Pass on lines
+static void hrec(double *in, int w, int h, int p, double *k, int n, double *out) {
     for(int i = 0; i<h; i++){
-        //printf("\nFila %i\n",i);
         // left-right pass
-        rightRFilter(in, i*w, 1, w-1, k, n);
-        //printf("Pasada a derecha:\n" );
-        //showMatrix(im, h, w);
+        rightRFilter(in, i*p, 1, w-1, k, n, out);
         // right-left pass
-        leftRFilter(in, i*w, 1, w-1, k, n);
-        //printf("Pasada a izquierda:\n");
-        //showMatrix(im, h, w);
+        leftRFilter(in, i*p, 1, w-1, k, n, out);
     }
 }
-static void vrec(float *in, int w, int h, int p, float *k, int n, float *out) {
-    // Pass on columns
+// Pass on columns
+static void vrec(double *in, int w, int h, int p, double *k, int n, double *out) {
     for(int j = 0; j<w; j++){
-        //printf("\nColumna %i\n\n", j);
         // top-down pass
-        rightRFilter(in, j, w, h-1, k, n);
-        //printf("Pasada top-down:\n" );
-        //showMatrix(im, h, w);
+        rightRFilter(in, j, p, h-1, k, n, out);
         // down-top pass
-        leftRFilter(in, j, w, h-1, k, n);
-        //printf("Pasada down-top:\n" );
-        //showMatrix(im, h, w);
+        leftRFilter(in, j, p, h-1, k, n, out);
     }
 }
 
@@ -80,50 +75,80 @@ int main(int argc, char const *argv[]) {
 
     int reps = 100;
     // somehow define n, h, w, and p
-    int n = 3, h = 1024, w = 1024, p = 1024;
+    int n = 5, h = 1024, w = 1024, p = 1024;
     // allocate and somehow fill it
-    std::vector<float> kernel(n, 0.f);
-    // allocate and somehow fill them
-    std::vector<float> input(h*p, 0.f), output(h*p, 0.f), temp(h*p, 0.f);
+    std::vector<double> kernel(n, 0.f);
+    // allocate and somehow fill them, pitch the same for all
+    std::vector<double> input(h*p, 0.f), output(h*p, 0.f), temp(h*p, 0.f);
 
-    //if(argc>0)
-    //int nro_it = (int)atoi(argv[1]);
-    // Si no hay nombre error
-    srand (time(NULL));
     // Filtro
-    int n = 5;
-    double k[n];
-    // fill the array from the opencv image
+    printf("Kerne:\n");
     for (int i = 0; i < n; i++) {
-        k[i] = (double)(rand()%10)/10;
+        kernel[i] = (double)(rand()%10)/10;
     }
-    //printf("Filtro:\n");
-    //showMatrix(k, 1, n);
-    int h = 1; int w = 1;
+    showMatrix(&kernel[0], 1,5);
+    
+    // Imagen
+    for(int i = 0; i<h; i++){
+        for(int j = 0; j<w ;j++){
+            input[i*p+j] = (double)rand()/RAND_MAX;
+        }
+    }
+    printf("%i x %i random image generated\n", h, w );
+    
+    // Test recursive
+    auto begin = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < reps; i++) {
+            hrec(&input[0], w, h, p, &kernel[0], n, &output[0]);
+        }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
+    std::cout << "hrec time was " << duration/reps << "ns\n";
+
+    begin = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < reps; i++) {
+            vrec(&input[0], w, h, p, &kernel[0], n, &output[0]);
+        }
+    end = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
+    std::cout << "vrec time was " << duration/reps << "ns\n";
+
+    // Test conv
+    /*
+    for (int i = 0; i < reps; i++) {
+        hconv(&input[0], w, h, p, &kernel[0], n, &temp[0]);
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
+    std::cout << "hconv time was " << duration/reps << "ns\n";
+
+    begin = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < reps; i++) {
+            vconv(&temp[0], w, h, p, &kernel[0], n, &output[0]);
+        }
+    end = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
+    std::cout << "vconv time was " << duration/reps << "ns\n";
+    */
+
+
+    return 0;
+
+    /*
+    srand (time(NULL));
+
     // Test to different image resolution
     for(int cont = 1; cont <=10; cont ++){
 
-        // For each 2^cont generate a random image and apply the filter
-        int h = 100*cont; int w = h;
-        // Imagen
-        double im[w*h];
-        for(int i = 0; i<h; i++){
-            for(int j = 0; j<w ;j++){
-                im[i*w+j] = (double)rand()/RAND_MAX;
-            }
-        }
-        //printf("%i x %i random image generated\n", h, w );
-        //showMatrix(im, h, w);
-
         int start = clock();
         // horizontal filtering
-        hrec(im, w, h, p, k, n, out);
+        hrec(&input[0], w, h, p, k, n, &output[0])
         int stop = clock();
         printf("%i %.6f\n", cont,1000*(double)(stop-start)/double(CLOCKS_PER_SEC));
 
         int start = clock();
         // vertical filtering
-        vrec(im, w, h, p, k, n, out);
+        vrec(&input[0], w, h, p, k, n, &output[0]);
         int stop = clock();
         printf("%i %.6f\n", cont,1000*(double)(stop-start)/double(CLOCKS_PER_SEC));
 
@@ -132,7 +157,7 @@ int main(int argc, char const *argv[]) {
         printf("%i %.6f\n", cont,1000*(double)(stop-start)/double(CLOCKS_PER_SEC));
     }
 
-    return 0;
+    return 0;*/
 
 }
 
