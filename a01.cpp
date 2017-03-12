@@ -10,6 +10,8 @@
 #include <complex>
 #include <cmath>
 
+/* Recursive filter implementation */
+
 // Recursive filter on 1d arrays.
 // input = c[i0], c[i0+s], ...., c[i0+m*s], i.e., c(i) = c(i0+s*i)
 // kernel = k[0], k[1], ...., k[n-1]
@@ -42,7 +44,7 @@ static void leftRFilter(double *in, int i0, int s, int m, double *k, int n, doub
         out[i0+s*(m-i)] = in[i0+s*(m-i)]-sum;
     }
 }
-// Pass on lines
+// Pass on matrix lines
 static void hrec(double *in, int w, int h, int p, double *k, int n, double *out) {
     for(int i = 0; i<h; i++){
         // left-right pass
@@ -51,7 +53,7 @@ static void hrec(double *in, int w, int h, int p, double *k, int n, double *out)
         leftRFilter(in, i*p, 1, w-1, k, n, out);
     }
 }
-// Pass on columns
+// Pass on matrix columns
 static void vrec(double *in, int w, int h, int p, double *k, int n, double *out) {
     for(int j = 0; j<w; j++){
         // top-down pass
@@ -71,6 +73,40 @@ static void showMatrix(double *a, int h, int w){
     }
 }
 
+/* Convolution implementation */
+
+// convolution on lines: line l = in[l*p+0], ... , in[l*p+w-1]
+static void hconv(double *in, int w, int h, int p, double *k, int n, double *out) {
+    // For every line
+    for(int l=0; l<h; l++){
+        // for every element in line l
+        for(int i = 0; i<w; i++){
+            double sum = 0;
+            for(int j = -n; j<=n && i-j<w && i-j>=0; j++){
+                // in[i,j] = in[p*i+j]
+                sum += k[abs(j)]*in[i-j];
+            }
+            out[i] = sum;
+        }
+    }
+}
+// Convolution on columns: column l = in[0*p+l], ... , in[(h-1)*p+l]
+static void vconv(double *in, int w, int h, int p, double *k, int n, double *out) {
+    // For every column
+    for(int l=0; l<w; l++){
+        // for every element in column c
+        for(int i = 0; i<h; i++){
+            double sum = 0;
+            for(int j = -n; j<=n && i-j<h && i-j>=0; j++){
+                // in[i,j] = in[p*i+j]
+                sum += k[abs(j)]*in[p*(i-j)+l];
+            }
+            out[i*p+l] = sum;
+        }
+    }
+}
+
+// Test program
 int main(int argc, char const *argv[]) {
 
     int reps = 100;
@@ -81,14 +117,14 @@ int main(int argc, char const *argv[]) {
     // allocate and somehow fill them, pitch the same for all
     std::vector<double> input(h*p, 0.f), output(h*p, 0.f), temp(h*p, 0.f);
 
-    // Filtro
-    printf("Kerne:\n");
+    // Random kernel
+    printf("Kernel:\t");
     for (int i = 0; i < n; i++) {
         kernel[i] = (double)(rand()%10)/10;
     }
     showMatrix(&kernel[0], 1,5);
     
-    // Imagen
+    // Random image
     for(int i = 0; i<h; i++){
         for(int j = 0; j<w ;j++){
             input[i*p+j] = (double)rand()/RAND_MAX;
@@ -113,15 +149,15 @@ int main(int argc, char const *argv[]) {
     duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
     std::cout << "vrec time was " << duration/reps << "ns\n";
 
-    // Test conv
-    /*
+    // Test convolution
+    // Horizontal
     for (int i = 0; i < reps; i++) {
         hconv(&input[0], w, h, p, &kernel[0], n, &temp[0]);
     }
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
+    end = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
     std::cout << "hconv time was " << duration/reps << "ns\n";
-
+    //Vertical
     begin = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < reps; i++) {
             vconv(&temp[0], w, h, p, &kernel[0], n, &output[0]);
@@ -129,7 +165,6 @@ int main(int argc, char const *argv[]) {
     end = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
     std::cout << "vconv time was " << duration/reps << "ns\n";
-    */
 
 
     return 0;
