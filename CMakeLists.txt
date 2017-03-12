@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 2.8)
+project( semana1 )
+find_package( OpenCV REQUIRED )
+add_executable( rconv rconv.cpp )
+target_link_libraries( rconv ${OpenCV_LIBS} )
