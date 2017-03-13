@@ -1,6 +1,6 @@
 Kernel:	0.30	0.60	0.70	0.50	0.30	
 1024 x 1024 random image generated
-hrec time was 46392151ns
-vrec time was 180128316ns
-hconv time was 344391014ns
-vconv time was 143672324ns
+hrec time was 45531372ns
+vrec time was 180745964ns
+hconv time was 221035193ns
+vconv time was 142908872ns

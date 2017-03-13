@@ -82,7 +82,7 @@ static void hconv(double *in, int w, int h, int p, double *k, int n, double *out
         // for every element in line l
         for(int i = 0; i<w; i++){
             double sum = 0;
-            for(int j = -n; j<=n && i-j<w && i-j>=0; j++){
+            for(int j = -n+1; j<=n-1 && i-j<w && i-j>=0; j++){
                 // in[i,j] = in[p*i+j]
                 sum += k[abs(j)]*in[i-j];
             }
@@ -97,7 +97,7 @@ static void vconv(double *in, int w, int h, int p, double *k, int n, double *out
         // for every element in column c
         for(int i = 0; i<h; i++){
             double sum = 0;
-            for(int j = -n; j<=n && i-j<h && i-j>=0; j++){
+            for(int j = -n+1; j<=n-1 && i-j<h && i-j>=0; j++){
                 // in[i,j] = in[p*i+j]
                 sum += k[abs(j)]*in[p*(i-j)+l];
             }
