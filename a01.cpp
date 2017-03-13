@@ -108,65 +108,89 @@ static void vconv(double *in, int w, int h, int p, double *k, int n, double *out
 
 // Test program
 int main(int argc, char const *argv[]) {
+    FILE *fout;
+    if(argc>1)
+        fout = fopen(argv[1], "w");
+    else
+        fout = fopen("out.txt", "w");
 
+    fprintf(fout, "n\tw\th\tp\threc\tvrec\thconv\tvconv\n" );
     int reps = 100;
     // somehow define n, h, w, and p
-    int n = 5, h = 1024, w = 1024, p = 1024;
+    int max_n = 20, max_h = 2048, max_w = 2048, max_p = 2048;
+    int n, h, w, p;
     // allocate and somehow fill it
-    std::vector<double> kernel(n, 0.f);
+    std::vector<double> kernel(max_n, 0.f);
     // allocate and somehow fill them, pitch the same for all
-    std::vector<double> input(h*p, 0.f), output(h*p, 0.f), temp(h*p, 0.f);
+    std::vector<double> input(max_h*max_p, 0.f), output(max_h*max_p, 0.f), temp(max_h*max_p, 0.f);
 
     // Random kernel
     printf("Kernel:\t");
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < max_n; i++) {
         kernel[i] = (double)(rand()%10)/10;
     }
     showMatrix(&kernel[0], 1,5);
-    
+
     // Random image
-    for(int i = 0; i<h; i++){
-        for(int j = 0; j<w ;j++){
-            input[i*p+j] = (double)rand()/RAND_MAX;
+    for(int i = 0; i<max_h; i++){
+        for(int j = 0; j<max_w ;j++){
+            input[i*max_p+j] = (double)rand()/RAND_MAX;
         }
     }
-    printf("%i x %i random image generated\n", h, w );
-    
-    // Test recursive
-    auto begin = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < reps; i++) {
+    printf("%i x %i random image generated\n", max_h, max_w );
+
+	for(n = 1; n<max_n; n++){
+    printf("n = %i\n", n);
+		for(w = 32; w<= max_w; w*=2){
+        //printf("holaaa\n");
+        h = w; p = w;
+        printf("%i\t%i\t%i\t%i\t", n, w, h, p);
+        fprintf(fout, "%i\t%i\t%i\t%i\t", n, w, h, p);
+
+        // Test recursive
+        auto begin = std::chrono::high_resolution_clock::now();
+        for (int i = 0; i < reps; i++) {
             hrec(&input[0], w, h, p, &kernel[0], n, &output[0]);
         }
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
-    std::cout << "hrec time was " << duration/reps << "ns\n";
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
+        fprintf(fout, "%ld\t", (long int)(duration/reps) );
+        printf("%ld\t", (long int)(duration/reps) );
+        //std::cout << "hrec time was " << duration/reps << "ns\n";
 
-    begin = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < reps; i++) {
-            vrec(&input[0], w, h, p, &kernel[0], n, &output[0]);
+        begin = std::chrono::high_resolution_clock::now();
+        for (int i = 0; i < reps; i++) {
+                vrec(&input[0], w, h, p, &kernel[0], n, &output[0]);
+            }
+        end = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
+        fprintf(fout, "%ld\t", (long int)(duration/reps) );
+        printf("%ld\t", (long int)(duration/reps) );
+        //std::cout << "vrec time was " << duration/reps << "ns\n";
+
+        // Test convolution
+        // Horizontal
+        for (int i = 0; i < reps; i++) {
+            hconv(&input[0], w, h, p, &kernel[0], n, &temp[0]);
         }
-    end = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
-    std::cout << "vrec time was " << duration/reps << "ns\n";
-
-    // Test convolution
-    // Horizontal
-    for (int i = 0; i < reps; i++) {
-        hconv(&input[0], w, h, p, &kernel[0], n, &temp[0]);
-    }
-    end = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
-    std::cout << "hconv time was " << duration/reps << "ns\n";
-    //Vertical
-    begin = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < reps; i++) {
-            vconv(&temp[0], w, h, p, &kernel[0], n, &output[0]);
-        }
-    end = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
-    std::cout << "vconv time was " << duration/reps << "ns\n";
-
-
+        end = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
+        fprintf(fout, "%ld\t", (long int)(duration/reps) );
+        printf("%ld\t", (long int)(duration/reps) );
+        //std::cout << "hconv time was " << duration/reps << "ns\n";
+        //Vertical
+        begin = std::chrono::high_resolution_clock::now();
+        for (int i = 0; i < reps; i++) {
+                vconv(&temp[0], w, h, p, &kernel[0], n, &output[0]);
+            }
+        end = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin).count();
+        fprintf(fout, "%ld\n", (long int)(duration/reps) );
+        printf("%ld\n", ( long int)(duration/reps) );
+        //std::cout << "vconv time was " << duration/reps << "ns\n";
+      }
+	  }
+    fclose(fout);
     return 0;
 
     /*
