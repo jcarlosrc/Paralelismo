@@ -63,32 +63,36 @@ static void vrec(double *in, int w, int h, int p, double *k, int n, double *out)
     }
 }
 
-// Debug function
-static void showMatrix(double *a, int h, int w){
-    for(int i = 0; i<h; i++){
-        for(int j = 0; j<w; j++){
-            printf("%.2f\t", a[i*w+j]);
-        }
-        printf("\n");
-    }
-}
-
 /* Convolution implementation */
 
 // convolution on lines: line l = in[l*p+0], ... , in[l*p+w-1]
-static void hconv(double *in, int w, int h, int p, double *k, int n, double *out) {
-    // For every line
-    for(int l=0; l<h; l++){
-        // for every element in line l
-        for(int i = 0; i<w; i++){
-            double sum = 0;
-            for(int j = -n+1; j<=n-1 && i-j<w && i-j>=0; j++){
-                // in[i,j] = in[p*i+j]
-                sum += k[abs(j)]*in[l*p+i-j];
+static void hconv(double *in, int _w, int _h, int p, double *k, int _n, double *out) {
+    int n = _n-1;
+    int w = _w-1;
+    int h = _h-1;
+
+    double *iline = &in[0];
+    double *oline = &out[0];
+    int lcont = 0;
+    while(lcont<=h){
+        for(int j = 0; j<=n; j++{
+            int knl = min(w-j, n);
+            int knr = min(j,n);
+            double sum = k[0]*iline[j];
+            for(int j = )
+            for(int s = 1; s<= kn; s++){
+                sum += k[s]*(iline[j+s]+iline[j-s]);
             }
-            out[l*p+i] = sum;
+            for(int s = kn+1; j<=n; j++){
+
+            }
+            iline[j] = sum;
         }
+        lcont++;
+        iline+=p;
+        oline+=p;
     }
+
 }
 // Convolution on columns: column l = in[0*p+l], ... , in[(h-1)*p+l]
 static void vconv(double *in, int w, int h, int p, double *k, int n, double *out) {
@@ -103,6 +107,16 @@ static void vconv(double *in, int w, int h, int p, double *k, int n, double *out
             }
             out[i*p+l] = sum;
         }
+    }
+}
+
+// Debug function
+static void showMatrix(double *a, int h, int w){
+    for(int i = 0; i<h; i++){
+        for(int j = 0; j<w; j++){
+            printf("%.2f\t", a[i*w+j]);
+        }
+        printf("\n");
     }
 }
 
