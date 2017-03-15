@@ -84,9 +84,9 @@ static void hconv(double *in, int w, int h, int p, double *k, int n, double *out
             double sum = 0;
             for(int j = -n+1; j<=n-1 && i-j<w && i-j>=0; j++){
                 // in[i,j] = in[p*i+j]
-                sum += k[abs(j)]*in[i-j];
+                sum += k[abs(j)]*in[l*p+i-j];
             }
-            out[i] = sum;
+            out[l*p+i] = sum;
         }
     }
 }
@@ -115,9 +115,9 @@ int main(int argc, char const *argv[]) {
         fout = fopen("out.txt", "w");
 
     fprintf(fout, "n\tw\th\tp\threc\tvrec\thconv\tvconv\n" );
-    int reps = 100;
+    int reps = 10;
     // somehow define n, h, w, and p
-    int max_n = 20, max_h = 2048, max_w = 2048, max_p = 2048;
+    int max_n = 15, max_h = 1024, max_w = 1024, max_p = 1024;
     int n, h, w, p;
     // allocate and somehow fill it
     std::vector<double> kernel(max_n, 0.f);
@@ -139,9 +139,9 @@ int main(int argc, char const *argv[]) {
     }
     printf("%i x %i random image generated\n", max_h, max_w );
 
-	for(n = 1; n<max_n; n++){
+	for(n = 5; n<=max_n; n+=5){
     printf("n = %i\n", n);
-		for(w = 32; w<= max_w; w*=2){
+		for(w = 256; w<= max_w; w+=128){
         //printf("holaaa\n");
         h = w; p = w;
         printf("%i\t%i\t%i\t%i\t", n, w, h, p);
@@ -170,6 +170,7 @@ int main(int argc, char const *argv[]) {
 
         // Test convolution
         // Horizontal
+        begin = std::chrono::high_resolution_clock::now();
         for (int i = 0; i < reps; i++) {
             hconv(&input[0], w, h, p, &kernel[0], n, &temp[0]);
         }

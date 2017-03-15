@@ -27,3 +27,8 @@
 *.exe
 *.out
 *.app
+
+# Image sources
+*.png
+*.jpg
+*.bmp
