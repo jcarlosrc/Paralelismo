@@ -92,10 +92,10 @@ static void hconv(double *in, int w, int h, int p, double *k, int n, double *out
 }
 // Convolution on columns: column l = in[0*p+l], ... , in[(h-1)*p+l]
 static void vconv(double *in, int w, int h, int p, double *k, int n, double *out) {
-    // For every column
-    for(int l=0; l<w; l++){
-        // for every element in column c
-        for(int i = 0; i<h; i++){
+    // for every element in column c
+    for(int i = 0; i<h; i++){
+        // For every column
+        for(int l=0; l<w; l++){
             double sum = 0;
             for(int j = -n+1; j<=n-1 && i-j<h && i-j>=0; j++){
                 // in[i,j] = in[p*i+j]
@@ -129,7 +129,8 @@ int main(int argc, char const *argv[]) {
     for (int i = 0; i < max_n; i++) {
         kernel[i] = (double)(rand()%10)/10;
     }
-    showMatrix(&kernel[0], 1,5);
+    printf("%i-sized random kernel generated\n", max_n);
+    //showMatrix(&kernel[0], 1,5);
 
     // Random image
     for(int i = 0; i<max_h; i++){
