@@ -10,6 +10,8 @@
 #include <complex>
 #include <cmath>
 
+using namespace std;
+
 /* Recursive filter implementation */
 
 // Recursive filter on 1d arrays.
@@ -65,7 +67,7 @@ static void vrec(double *in, int w, int h, int p, double *k, int n, double *out)
 
 /* Convolution implementation */
 
-// convolution on lines: line l = in[l*p+0], ... , in[l*p+w-1]
+// convolution on ROWS:  l = in[l*p+0], ... , in[l*p+w-1]
 static void hconv(double *in, int _w, int _h, int p, double *k, int _n, double *out) {
     int n = _n-1;
     int w = _w-1;
@@ -75,18 +77,22 @@ static void hconv(double *in, int _w, int _h, int p, double *k, int _n, double *
     double *oline = &out[0];
     int lcont = 0;
     while(lcont<=h){
-        for(int j = 0; j<=n; j++{
-            int knl = min(w-j, n);
-            int knr = min(j,n);
+        int kl = 0, kr = 0, kn = 0;
+        for(int j = 0; j<=n; j++){
+            kr = min(w-j, n);
+            kl = min(n,j);
+            kn = min(kl, kr);
             double sum = k[0]*iline[j];
-            for(int j = )
-            for(int s = 1; s<= kn; s++){
+            for(int s = kn+1; s<= kl; s++){
+                sum += k[s]*iline[j-s];
+            }
+            for(int s =0 ; s<= kn; s++){
                 sum += k[s]*(iline[j+s]+iline[j-s]);
             }
-            for(int s = kn+1; j<=n; j++){
-
+            for(int s = kn+1; s<=kr; s++){
+                sum += k[s]*(iline[j+s]);
             }
-            iline[j] = sum;
+            oline[j] = sum;
         }
         lcont++;
         iline+=p;
@@ -94,8 +100,36 @@ static void hconv(double *in, int _w, int _h, int p, double *k, int _n, double *
     }
 
 }
+
+// convolution on COLUMNS: line l = in[l*p+0], ... , in[l*p+w-1]
+static void vconv(double *in, int _w, int _h, int p, double *k, int _n, double *out) {
+    int n = _n-1;
+    int w = _w-1;
+    int h = _h-1;
+
+    for(int i = 0; i<=h; i++){
+        int kl = 0, kr = 0, kn = 0;
+        for(int j = 0; j<=n; j++){
+            kr = min(w-i, n);
+            kl = min(n,i);
+            kn = min(kl, kr);
+            double sum = k[0]*in[i*p+j];
+            for(int s = kn+1; s<= kl; s++){
+                sum += k[s]*in[(i-s)*p+j];
+            }
+            for(int s =0 ; s<= kn; s++){
+                sum += k[s]*(in[(i+s)*p+j]+in[(i-s)*p+j]);
+            }
+            for(int s = kn+1; s<=kr; s++){
+                sum += k[s]*(in[(i+s)*p+j]);
+            }
+            out[i*p+j] = sum;
+        }
+    }
+}
+
 // Convolution on columns: column l = in[0*p+l], ... , in[(h-1)*p+l]
-static void vconv(double *in, int w, int h, int p, double *k, int n, double *out) {
+/*static void vconv(double *in, int w, int h, int p, double *k, int n, double *out) {
     // for every element in column c
     for(int i = 0; i<h; i++){
         // For every column
@@ -109,7 +143,7 @@ static void vconv(double *in, int w, int h, int p, double *k, int n, double *out
         }
     }
 }
-
+*/
 // Debug function
 static void showMatrix(double *a, int h, int w){
     for(int i = 0; i<h; i++){
