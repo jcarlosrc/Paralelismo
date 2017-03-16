@@ -12,56 +12,56 @@
 
 using namespace std;
 
-/* Recursive filter implementation */
-
-// Recursive filter on 1d arrays.
-// input = c[i0], c[i0+s], ...., c[i0+m*s], i.e., c(i) = c(i0+s*i)
-// kernel = k[0], k[1], ...., k[n-1]
-
-// left-right pass
-static void rightRFilter(double *in, int i0, int s, int m, double *k, int n, double *out){
-    // First element (i = 0) doesnt change
-    out[0] = in[0];
-    for(int i = 1; i < m+1; i++){
-        double sum = 0;
-        // Suma en los elementos del k x los de c no negativos
-        for(int r = 0; r<i && r<n; r++){
-            sum += k[r]*out[s*(i-1-r)+i0];
-        }
-        //Actualizar c(i) = c(i) - sum
-        out[i0+s*i] = in[i0+s*i]-sum;
-    }
-}
-// right-left pass
-static void leftRFilter(double *in, int i0, int s, int m, double *k, int n, double *out){
-    // Last element (i = m) doesnt change
-    out[i0+s*m] = in[i0+s*m];
-    for(int i = 1; i < m+1; i++){
-        double sum = 0;
-        // Suma en los elementos del k x los de c no negativos
-        for(int j = 0; j<n && j<i; j++){
-            sum += k[j]*out[s*(m-i+1+j)+i0];
-        }
-        //Update c(m-i) = in(m-i) - sum
-        out[i0+s*(m-i)] = in[i0+s*(m-i)]-sum;
-    }
-}
-// Pass on matrix lines
+// Horizontal recursive
 static void hrec(double *in, int w, int h, int p, double *k, int n, double *out) {
+    double *iline = &in[0];
+    double *oline = &out[0];
     for(int i = 0; i<h; i++){
         // left-right pass
-        rightRFilter(in, i*p, 1, w-1, k, n, out);
+        for(int j = 0; j<w; j++){
+            double sum = 0;
+            int minn = std::min(j,n);
+            for(int r = 0; r<minn; r++){
+                sum += k[r]*oline[j-1-r];
+            }
+            oline[j] = iline[j] - sum;
+        }
         // right-left pass
-        leftRFilter(in, i*p, 1, w-1, k, n, out);
+        for(int j = 0; j<w; j++){
+            double sum = 0;
+            int minn = std::min(w-j-1,n);
+            for(int r = 0; r<minn; r++){
+                sum += k[r]*oline[j+1+r];
+            }
+            oline[j] = iline[j] - sum;
+        }
+        iline +=p;
+        oline +=p;
     }
 }
-// Pass on matrix columns
+// Vertical recursive
 static void vrec(double *in, int w, int h, int p, double *k, int n, double *out) {
-    for(int j = 0; j<w; j++){
-        // top-down pass
-        rightRFilter(in, j, p, h-1, k, n, out);
-        // down-top pass
-        leftRFilter(in, j, p, h-1, k, n, out);
+    // top-bottom pass
+    for(int i = 0; i<h; i++){
+        for(int j = 0; j<w; j++){
+            int minn = std::min(n, i);
+            double sum = 0;
+            for(int r = 0; r<minn; r++){
+                sum += k[r]*out[p*(i-1-r)+j];
+            }
+            out[p*i+j] = in[p*i+j]-sum;
+        }
+    }
+    // bottom-top pass
+    for(int i = 0; i<h; i++){
+        for(int j = 0; j<w; j++){
+            int minn = std::min(n, h-i-1);
+            double sum = 0;
+            for(int r = 0; r<minn; r++){
+                sum += k[r]*out[p*(i+1+r)+j];
+            }
+            out[p*i+j] = in[p*i+j]-sum;
+        }
     }
 }
 
@@ -76,7 +76,7 @@ static void hconv(double *in, int _w, int _h, int p, double *k, int _n, double *
     double *iline = &in[0];
     double *oline = &out[0];
     int lcont = 0;
-    while(lcont<=h){
+    for(int i = 0; i<h; i++){
         int kl = 0, kr = 0, kn = 0;
         for(int j = 0; j<=n; j++){
             kr = min(w-j, n);
@@ -94,7 +94,6 @@ static void hconv(double *in, int _w, int _h, int p, double *k, int _n, double *
             }
             oline[j] = sum;
         }
-        lcont++;
         iline+=p;
         oline+=p;
     }
@@ -127,23 +126,6 @@ static void vconv(double *in, int _w, int _h, int p, double *k, int _n, double *
         }
     }
 }
-
-// Convolution on columns: column l = in[0*p+l], ... , in[(h-1)*p+l]
-/*static void vconv(double *in, int w, int h, int p, double *k, int n, double *out) {
-    // for every element in column c
-    for(int i = 0; i<h; i++){
-        // For every column
-        for(int l=0; l<w; l++){
-            double sum = 0;
-            for(int j = -n+1; j<=n-1 && i-j<h && i-j>=0; j++){
-                // in[i,j] = in[p*i+j]
-                sum += k[abs(j)]*in[p*(i-j)+l];
-            }
-            out[i*p+l] = sum;
-        }
-    }
-}
-*/
 // Debug function
 static void showMatrix(double *a, int h, int w){
     for(int i = 0; i<h; i++){
